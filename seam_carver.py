@@ -56,9 +56,9 @@ def compute_energy(image: np.ndarray):
     rows, cols, channel_count = image.shape
     result = np.zeros((rows, cols))
     
-    for row in range(rows - 1):
-        for col in range(cols - 1):
-            if row == 0 | col == 0 | row == rows - 1 | col == cols - 1:
+    for row in range(rows):
+        for col in range(cols):
+            if row == 0 or col == 0 or row == rows - 1 or col == cols - 1:
                 result[row][col] = 1000
             
             else:
@@ -134,23 +134,34 @@ def find_vertical_seam(image: np.ndarray, energy=None):
     # Begin your work here
     rows, cols = energy.shape
     OPT_cost = np.zeros((rows, cols))
-    OPT_parent = np.zeros((rows, cols))
-    for i in range(cols - 1):
-        OPT_cost[0][i] = 1000
+    OPT_parent = np.zeros((rows, cols), dtype=int)
+    for i in range(cols):
+        OPT_cost[0][i] = energy[0][i]
 
     for row in range(1, rows):
-        for col in range(1, cols - 1):
-
-            top_left = (OPT_cost[row-1][col - 1], col - 1)
-            top_center = (OPT_cost[row -1][col], col)
-            top_right = (OPT_cost[row -1][col + 1], col + 1)
-            acc_cost, parent = min(top_left, top_center, top_right)
-            OPT_cost[row][col] = acc_cost
+        for col in range(cols):
+            if col == 0:
+                top_center = (OPT_cost[row - 1][col], col)
+                top_right = (OPT_cost[row - 1][col + 1], col + 1)
+                acc_cost, parent = min(top_center, top_right)
+            
+            elif col == cols - 1:
+                top_left = (OPT_cost[row - 1][col - 1], col - 1)
+                top_center = (OPT_cost[row - 1][col], col)
+                acc_cost, parent = min(top_left, top_center)
+            
+            else:
+                top_left = (OPT_cost[row - 1][col - 1], col - 1)
+                top_center = (OPT_cost[row - 1][col], col)
+                top_right = (OPT_cost[row - 1][col + 1], col + 1)
+                acc_cost, parent = min(top_left, top_center, top_right)
+            
+            OPT_cost[row][col] = acc_cost + energy[row][col]
             OPT_parent[row][col] = parent
 
     min_cost = 100000000
     min_idx = 0
-    for col in range(1, cols-1):
+    for col in range(cols):
         if (OPT_cost[rows - 1][col] < min_cost):
             min_cost = OPT_cost[rows - 1][col]
             min_idx = col
@@ -162,7 +173,9 @@ def find_vertical_seam(image: np.ndarray, energy=None):
         parent = OPT_parent[i][parent]
         path.append(parent)
 
-    path.reverse();
+    path.reverse()
+
+    return np.array(path)
 
 
     # --------------------- END TODO ---------------------------
@@ -242,7 +255,8 @@ def main():
     sequence = []
 
     # cap number of seams to carve at 200
-    for _ in range(min([200, original_shape[1]])):
+    total_seams = min([200, original_shape[1]])
+    for i in range(total_seams):
         # Create a frame for the seam to be carved away in red
         vertical_indices = tuple(np.arange(image.shape[0]))
         horizontal_indices = tuple(find_vertical_seam(image))
@@ -304,7 +318,8 @@ def main():
     sequence = []
 
     # cap number of seams to carve at 200
-    for _ in range(min([200, original_shape[0]])):
+    total_seams = min([200, original_shape[0]])
+    for i in range(total_seams):
         # Create a frame for the seam to be carved away in red
         vertical_indices = tuple(find_horizontal_seam(image))
         horizontal_indices = tuple(np.arange(image.shape[1]))
